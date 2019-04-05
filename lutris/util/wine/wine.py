@@ -49,6 +49,7 @@ def get_proton_paths():
         for version in proton_versions:
             if system.path_exists(os.path.join(path, version, "dist/bin/wine")):
                 paths.append(path)
+                break
     return paths
 
 
@@ -153,8 +154,8 @@ def get_wine_versions():
     for proton_path in get_proton_paths():
         proton_versions = [p for p in os.listdir(proton_path) if "Proton" in p]
         for version in proton_versions:
-            proton_path = os.path.join(proton_path, version, "dist/bin/wine")
-            if os.path.isfile(proton_path):
+            proton_wine_path = os.path.join(proton_path, version, "dist/bin/wine")
+            if os.path.isfile(proton_wine_path):
                 versions.append(version)
 
     if POL_PATH:
