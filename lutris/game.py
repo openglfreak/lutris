@@ -463,6 +463,7 @@ class Game(GObject.Object):
             self.heartbeat = GLib.timeout_add(HEARTBEAT_DELAY, self.prelaunch_beat)
         else:
             self.start_game()
+            self.runner.postlaunch()
 
     def launch(self):
         """Request launching a game. The game may not be installed yet."""
@@ -514,6 +515,7 @@ class Game(GObject.Object):
         if self.prelaunch_executor and self.prelaunch_executor.is_running:
             return True
         self.start_game()
+        self.runner.postlaunch()
         return False
 
     def beat(self):

@@ -247,6 +247,9 @@ class Runner:  # pylint: disable=too-many-public-methods
             raise UnavailableLibraries(unavailable_libs, self.arch)
         return True
 
+    def postlaunch(self):
+        """Run actions after starting the game, override this method in runners"""
+
     def get_run_data(self):
         """Return dict with command (exe & args list) and env vars (dict).
 
