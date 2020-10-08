@@ -239,11 +239,15 @@ def wineexec(  # noqa: C901
     """
     if env is None:
         env = {}
+    if args is None:
+        args = ()
     if exclude_processes is None:
         exclude_processes = []
     if include_processes is None:
         include_processes = []
     executable = str(executable) if executable else ""
+    if isinstance(args, str):
+        args = split_arguments(args)
     if isinstance(include_processes, str):
         include_processes = shlex.split(include_processes)
     if isinstance(exclude_processes, str):
@@ -260,7 +264,7 @@ def wineexec(  # noqa: C901
 
     executable, _args, working_dir = get_real_executable(executable, working_dir)
     if _args:
-        args = '{} "{}"'.format(_args[0], _args[1])
+        args = _args
 
     # Create prefix if necessary
     if arch not in ("win32", "win64"):
@@ -303,7 +307,7 @@ def wineexec(  # noqa: C901
     command_parameters = [wine_path]
     if executable:
         command_parameters.append(executable)
-    command_parameters += split_arguments(args)
+    command_parameters += args
     if blocking:
         return system.execute(command_parameters, env=wineenv, cwd=working_dir)
     wine = import_runner("wine")
