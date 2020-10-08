@@ -21,7 +21,16 @@ PROTECTED_HOME_FOLDERS = (
 )
 
 
-def execute(command, env=None, cwd=None, log_errors=False, quiet=False, shell=False, timeout=None):
+def execute(
+    command,
+    env=None,
+    cwd=None,
+    log_errors=False,
+    quiet=False,
+    shell=False,
+    timeout=None,
+    redirect_stdin=False
+):
     """
         Execute a system command and return its results.
 
@@ -62,6 +71,7 @@ def execute(command, env=None, cwd=None, log_errors=False, quiet=False, shell=Fa
         stdout, stderr = subprocess.Popen(
             command,
             shell=shell,
+            stdin=subprocess.PIPE if redirect_stdin else None,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE if log_errors else subprocess.DEVNULL,
             env=existing_env,

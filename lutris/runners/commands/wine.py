@@ -217,6 +217,7 @@ def wineexec(  # noqa: C901
     disable_runtime=False,
     env=None,
     overrides=None,
+    redirect_stdin=False,
 ):
     """
     Execute a Wine command.
@@ -309,7 +310,7 @@ def wineexec(  # noqa: C901
         command_parameters.append(executable)
     command_parameters += args
     if blocking:
-        return system.execute(command_parameters, env=wineenv, cwd=working_dir)
+        return system.execute(command_parameters, env=wineenv, cwd=working_dir, redirect_stdin=redirect_stdin)
     wine = import_runner("wine")
     command = MonitoredCommand(
         command_parameters,
@@ -318,6 +319,7 @@ def wineexec(  # noqa: C901
         cwd=working_dir,
         include_processes=include_processes,
         exclude_processes=exclude_processes,
+        redirect_stdin=redirect_stdin,
     )
     command.start()
     return command

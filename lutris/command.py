@@ -51,6 +51,7 @@ class MonitoredCommand:
         exclude_processes=None,
         log_buffer=None,
         title=None,
+        redirect_stdin=False,
     ):  # pylint: disable=too-many-arguments
         self.ready_state = True
         self.env = self.get_environment(env)
@@ -64,6 +65,7 @@ class MonitoredCommand:
         self.terminal = term
         self.is_running = True
         self.error = None
+        self.redirect_stdin = redirect_stdin
         self.log_handlers = [
             self.log_handler_stdout,
             self.log_handler_console_output,
@@ -219,6 +221,7 @@ class MonitoredCommand:
         try:
             return subprocess.Popen(
                 command,
+                stdin=subprocess.PIPE if self.redirect_stdin else None,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 cwd=self.cwd,
