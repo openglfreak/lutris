@@ -22,6 +22,7 @@ from lutris.util.jobs import thread_safe_call
 from lutris.util.log import logger
 from lutris.util.strings import parse_version, split_arguments
 from lutris.util.wine import dxvk, nine
+from lutris.util.wine.discordipc import Winestreamproxy
 from lutris.util.wine.prefix import WinePrefixManager, find_prefix
 from lutris.util.wine.wine import (
     POL_PATH, WINE_DIR, WINE_PATHS, detect_arch, display_vulkan_error, esync_display_limit_warning,
@@ -545,6 +546,17 @@ class wine(Runner):
                 "help": _("Custom directory for desktop integration folders."),
                 "advanced": True,
             },
+            {
+                "option": "discord_proxy",
+                "type": "bool",
+                "label": _("Start Discord IPC proxy with game"),
+                "default": True,
+                "advanced": True,
+                "help": _(
+                    "Whether to start a proxy for Discord inter-process communication "
+                    "in the prefix before launching the game"
+                ),
+            },
         ]
 
     @property
@@ -860,6 +872,10 @@ class wine(Runner):
             )
         except nine.NineUnavailable as ex:
             raise GameConfigError("Unable to configure GalliumNine: %s" % ex)
+
+        if self.runner_config.get("discord_proxy"):
+            Winestreamproxy.download()
+
         return True
 
     def get_dll_overrides(self):
@@ -900,6 +916,10 @@ class wine(Runner):
         # funky issues.
         if self.runner_config.get("dxvk") and drivers.is_amd():
             env["RADV_DEBUG"] = "zerovram"
+
+        if self.runner_config.get("discord_proxy"):
+            xdg_runtime_dir = env.get("XDG_RUNTIME_DIR", os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
+            env.update(Winestreamproxy.get_environment_variables(xdg_runtime_dir))
 
         overrides = self.get_dll_overrides()
         if overrides:
@@ -1047,6 +1067,9 @@ class wine(Runner):
                     return {"error": "NON_FSYNC_WINE_VERSION"}
 
         command = [self.get_executable()]
+
+        if self.runner_config.get("discord_proxy", True):
+            command.insert(0, Winestreamproxy.get_wrapper_path())
 
         game_exe, args, _working_dir = get_real_executable(game_exe, self.working_dir)
         command.append(game_exe)
