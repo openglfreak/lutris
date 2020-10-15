@@ -544,6 +544,17 @@ class wine(Runner):
                 "help": _("Custom directory for desktop integration folders."),
                 "advanced": True,
             },
+            {
+                "option": "discord_proxy",
+                "type": "bool",
+                "label": _("Start Discord IPC proxy with game"),
+                "default": False,
+                "advanced": True,
+                "help": _(
+                    "Whether to start a proxy for Discord inter-process communication "
+                    "in the prefix before launching the game"
+                ),
+            },
         ]
 
     @property
@@ -901,6 +912,13 @@ class wine(Runner):
         if self.runner_config.get("dxvk") and drivers.is_amd():
             env["RADV_DEBUG"] = "zerovram"
 
+        if self.runner_config.get("discord_proxy"):
+            xdg_runtime_dir = env.get("XDG_RUNTIME_DIR") or os.environ.get("XDG_RUNTIME_DIR") or "/tmp"
+            socket_path = os.path.join(xdg_runtime_dir, 'discord-ipc-0')
+            env.update({'WINESTREAMPROXY_PIPE_NAME': 'discord-ipc-0',
+                        'WINESTREAMPROXY_SOCKET_PATH': socket_path,
+                        'WINESTREAMPROXY_SYSTEM': 'true'})
+
         overrides = self.get_dll_overrides()
         if overrides:
             self.dll_overrides.update(overrides)
@@ -1047,6 +1065,10 @@ class wine(Runner):
                     return {"error": "NON_FSYNC_WINE_VERSION"}
 
         command = [self.get_executable()]
+
+        if self.runner_config.get("discord_proxy"):
+            winestreamproxy_wrapper = os.path.join(RUNTIME_DIR, "winestreamproxy", "wrapper.sh")
+            command.insert(0, winestreamproxy_wrapper)
 
         game_exe, args, _working_dir = get_real_executable(game_exe, self.working_dir)
         command.append(game_exe)
