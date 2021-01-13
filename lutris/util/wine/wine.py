@@ -1,6 +1,7 @@
 """Utilities for manipulating Wine"""
 # Standard Library
 import os
+import os.path
 import subprocess
 from collections import OrderedDict
 from functools import lru_cache
@@ -443,3 +444,58 @@ def get_overrides_env(overrides):
             continue
         override_strings.append("{}={}".format(",".join(sorted(dlls)), value))
     return ";".join(override_strings)
+
+
+def strtoul(inp):
+    """
+    Mimics the `strtoul` C function. Takes a `bytes` as input.
+    Doesn't handle overflows since those don't exist in python.
+    """
+    if not inp:
+        return 0
+
+    while inp[0] in (9, 10, 11, 12, 13, 32):  # "\t", "\n", "\v", "\f", "\r", " "
+        inp = inp[1:]
+        if not inp:
+            return 0
+
+    negative = False
+    if inp[0] in (43, 45):  # "+", "-"
+        if inp[0] == 45:  # "-"
+            negative = True
+        inp = inp[1:]
+        if not inp:
+            return 0
+
+    value = 0
+    for digit in inp:
+        digit = digit - 48  # "0"
+        if digit < 0 or digit > 9:
+            break
+        value = value * 10 + digit
+
+    return -value if negative else value
+
+
+def prefix_check_update(wine_path, prefix_path):
+    """
+    Checks whether a Wine prefix would be updated the next time it is used.
+    """
+    wine_inf_path = os.path.join(wine_path, "share", "wine", "wine.inf")
+    try:
+        wine_timestamp = os.stat(wine_inf_path).st_mtime
+    except OSError:
+        return False
+
+    prefix_timestamp_path = os.path.join(prefix_path, ".update-timestamp")
+    try:
+        with open(prefix_timestamp_path, "rb+") as file:
+            prefix_timestamp = file.read(100)
+    except FileNotFoundError:
+        return os.access(os.path.dirname(prefix_timestamp_path), os.W_OK)
+    except OSError:
+        return False
+
+    if prefix_timestamp.startswith(b"disable"):
+        return False
+    return strtoul(prefix_timestamp) != wine_timestamp

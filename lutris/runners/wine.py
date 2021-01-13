@@ -1,11 +1,14 @@
 """Wine runner"""
 # pylint: disable=too-many-lines
 import os
+import os.path
 import shlex
 import shutil
+import threading
 from gettext import gettext as _
 
 from lutris import runtime
+from lutris.command import MonitoredCommand
 from lutris.exceptions import GameConfigError
 from lutris.gui.dialogs import FileDialog
 from lutris.runners.commands.wine import (  # noqa: F401 pylint: disable=unused-import
@@ -27,7 +30,7 @@ from lutris.util.wine.wine import (
     POL_PATH, WINE_DIR, WINE_PATHS, detect_arch, display_vulkan_error, esync_display_limit_warning,
     esync_display_version_warning, fsync_display_support_warning, fsync_display_version_warning, get_default_version,
     get_overrides_env, get_proton_paths, get_real_executable, get_system_wine_version, get_wine_versions,
-    is_esync_limit_set, is_fsync_supported, is_version_esync, is_version_fsync
+    is_esync_limit_set, is_fsync_supported, is_version_esync, is_version_fsync, prefix_check_update
 )
 from lutris.util.wine.x360ce import X360ce
 
@@ -824,6 +827,17 @@ class wine(Runner):
         except dxvk.UnavailableDXVKVersion:
             raise GameConfigError("Unable to get " + base_name.upper() + " %s" % dxvk_manager.version)
 
+    def prefix_wants_update(self):
+        wine_dir = os.path.dirname(os.path.dirname(self.get_executable()))
+        return prefix_check_update(wine_dir, self.prefix_path)
+
+    def update_prefix(self):
+        evt = threading.Event()
+        command = MonitoredCommand([self.get_executable(), 'wineboot', '-u'], env=self.get_env())
+        command.stop_func = evt.set
+        command.start()
+        evt.wait()
+
     def prelaunch(self):
         if not system.path_exists(os.path.join(self.prefix_path, "user.reg")):
             create_prefix(self.prefix_path, arch=self.wine_arch)
@@ -849,6 +863,9 @@ class wine(Runner):
             )
         except nine.NineUnavailable as ex:
             raise GameConfigError("Unable to configure GalliumNine: %s" % ex)
+
+        if self.prefix_wants_update():
+            self.update_prefix()
         return True
 
     def get_dll_overrides(self):
